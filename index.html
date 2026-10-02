@@ -540,14 +540,17 @@
             <input type="text" id="qBus">
           </div>
           <div class="form-group">
-            <label>Tipo</label>
+            <label>Especialidad</label>
             <select id="qTipo">
-              <option value="Mecánico">Mecánico</option>
-              <option value="Eléctrico">Eléctrico</option>
-              <option value="Llantas">Llantas</option>
-              <option value="Carrocería">Carrocería</option>
-              <option value="Programación">Programación</option>
-              <option value="Otro">Otro</option>
+              <option value="Carrocería Interna">Carrocería Interna</option>
+              <option value="Carrocería Externa">Carrocería Externa</option>
+              <option value="Circuito Neumático">Circuito Neumático</option>
+              <option value="Frenos">Frenos</option>
+              <option value="Transmisión">Transmisión</option>
+              <option value="Neumáticos">Neumáticos</option>
+              <option value="Electricidad">Electricidad</option>
+              <option value="Taller">Taller</option>
+              <option value="Otros">Otros</option>
             </select>
           </div>
           <div class="form-group">
@@ -582,17 +585,20 @@
       <div class="form-grid">
         <div class="form-group">
           <label>Bus / Unidad *</label>
-          <input type="text" id="fBus" placeholder="Ej: Bus 45">
+          <input type="text" id="fBus" placeholder="Ej: 41045, Troncal 45">
         </div>
         <div class="form-group">
-          <label>Tipo</label>
+          <label>Especialidad</label>
           <select id="fTipo">
-            <option value="Mecánico">Mecánico</option>
-            <option value="Eléctrico">Eléctrico</option>
-            <option value="Llantas">Llantas</option>
-            <option value="Carrocería">Carrocería</option>
-            <option value="Programación">Programación</option>
-            <option value="Otro">Otro</option>
+            <option value="Carrocería Interna">Carrocería Interna</option>
+            <option value="Carrocería Externa">Carrocería Externa</option>
+            <option value="Circuito Neumático">Circuito Neumático</option>
+            <option value="Frenos">Frenos</option>
+            <option value="Transmisión">Transmisión</option>
+            <option value="Neumáticos">Neumáticos</option>
+            <option value="Electricidad">Electricidad</option>
+            <option value="Taller">Taller</option>
+            <option value="Otros">Otros</option>
           </select>
         </div>
         <div class="form-group">
@@ -630,7 +636,19 @@
   <!-- ===== TAB: LOG ===== -->
   <div class="tab-content" id="tab-log">
     <div class="filters">
-      <input type="text" id="filterSearch" placeholder="🔍 Buscar...">
+      <input type="text" id="filterSearch" placeholder="🔍 Buscar bus, falla...">
+      <select id="filterEspecialidad">
+        <option value="">Especialidad</option>
+        <option value="Carrocería Interna">Carrocería Interna</option>
+        <option value="Carrocería Externa">Carrocería Externa</option>
+        <option value="Circuito Neumático">Circuito Neumático</option>
+        <option value="Frenos">Frenos</option>
+        <option value="Transmisión">Transmisión</option>
+        <option value="Neumáticos">Neumáticos</option>
+        <option value="Electricidad">Electricidad</option>
+        <option value="Taller">Taller</option>
+        <option value="Otros">Otros</option>
+      </select>
       <select id="filterStatus">
         <option value="">Estado</option>
         <option value="pendiente">Pendiente</option>
@@ -811,6 +829,107 @@
     recognition.start();
   }
 
+  // ===== BUS CODE & SPECIALTY HELPERS =====
+  function convertSpokenNumbers(str) {
+    const tensMap = {
+      'veinte': 20, 'treinta': 30, 'cuarenta': 40, 'cincuenta': 50,
+      'sesenta': 60, 'setenta': 70, 'ochenta': 80, 'noventa': 90
+    };
+    const unitsMap = {
+      'cero': 0, 'un': 1, 'uno': 1, 'una': 1, 'dos': 2, 'tres': 3, 'cuatro': 4,
+      'cinco': 5, 'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,
+      'once': 11, 'doce': 12, 'trece': 13, 'catorce': 14, 'quince': 15,
+      'dieciséis': 16, 'dieciseis': 16, 'diecisiete': 17, 'dieciocho': 18, 'diecinueve': 19,
+      'veintiuno': 21, 'veintidós': 22, 'veintidos': 22, 'veintitrés': 23, 'veintitres': 23,
+      'veinticuatro': 24, 'veinticinco': 25, 'veintiséis': 26, 'veintiseis': 26,
+      'veintisiete': 27, 'veintiocho': 28, 'veintinueve': 29, 'cien': 100, 'ciento': 100
+    };
+
+    let res = str.replace(/\b(treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa)\s+y\s+(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)\b/gi, (m, t, u) => {
+      return (tensMap[t.toLowerCase()] || 0) + (unitsMap[u.toLowerCase()] || 0);
+    });
+
+    res = res.replace(/\b(cero|un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|diecis[eé]is|diecisiete|dieciocho|diecinueve|veinte|veinti[a-záéíóú]+|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|ciento)\b/gi, m => {
+      const k = m.toLowerCase();
+      if (unitsMap[k] !== undefined) return unitsMap[k];
+      if (tensMap[k] !== undefined) return tensMap[k];
+      return m;
+    });
+
+    return res;
+  }
+
+  function extractBusCode(rawText) {
+    const text = convertSpokenNumbers(rawText);
+
+    // 1. Troncal: "troncal 45" -> "41045"
+    const troncalMatch = text.match(/\b(?:el\s+|la\s+)?troncal\s*(?:número\s*|nro\s*|no\s*)?(\d+)\b/i);
+    if (troncalMatch) {
+      const numStr = troncalMatch[1];
+      if (numStr.startsWith('41') && numStr.length >= 5) return numStr;
+      return '41' + numStr.padStart(3, '0');
+    }
+
+    // 2. Alimentador: "alimentador 45" -> "42045"
+    const alimentadorMatch = text.match(/\b(?:el\s+|la\s+)?alimentador(?:a)?\s*(?:número\s*|nro\s*|no\s*)?(\d+)\b/i);
+    if (alimentadorMatch) {
+      const numStr = alimentadorMatch[1];
+      if (numStr.startsWith('42') && numStr.length >= 5) return numStr;
+      return '42' + numStr.padStart(3, '0');
+    }
+
+    // 3. Generic bus: "bus 45", "unidad 12"
+    const genericMatch = text.match(/\b(?:bus|unidad|camión|camion|carro|móvil|movil|padrón|padron)\s*(?:número\s*|nro\s*|no\s*)?(\d+)\b/i);
+    if (genericMatch) {
+      return genericMatch[1];
+    }
+
+    // 4. Any direct 4-5 digit or 2-4 digit number
+    const directCodeMatch = text.match(/\b(4[12]\d{3})\b/) || text.match(/\b(\d{2,5})\b/);
+    if (directCodeMatch) {
+      return directCodeMatch[1];
+    }
+
+    return '';
+  }
+
+  function parseEspecialidad(text) {
+    const lower = text.toLowerCase();
+    // 1. Carrocería Interna
+    if (/\b(carrocer[ií]a\s+interna|asiento|asientos|pasamano|pasamanos|timbre|timbres|piso|pisos|torniquete|validador|barra|techo\s+interno|cabina)\b/i.test(lower)) {
+      return 'Carrocería Interna';
+    }
+    // 2. Carrocería Externa
+    if (/\b(carrocer[ií]a\s+externa|parabrisa|parabrisas|espejo|espejos|retrovisor|retrovisores|chapa|pintura|ventana|ventanas|vidrio|vidrios|defensa|defensas|paragolpe|paragolpes|parachoques|farola|farolas|abolladura|golpe|limpiaparabrisas|puerta\s+externa)\b/i.test(lower)) {
+      return 'Carrocería Externa';
+    }
+    // 3. Circuito Neumático
+    if (/\b(circuito\s+neum[aá]tico|fuga\s+de\s+aire|presi[oó]n\s+de\s+aire|compresor|fuelle|fuelles|suspensi[oó]n\s+neum[aá]tica|aire|v[aá]lvula|valvulas|tanque\s+de\s+aire)\b/i.test(lower)) {
+      return 'Circuito Neumático';
+    }
+    // 4. Frenos
+    if (/\b(freno|frenos|pastilla|pastillas|balata|balatas|disco|discos|tambor|tambores|abs|caliper|l[ií]quido\s+de\s+frenos?)\b/i.test(lower)) {
+      return 'Frenos';
+    }
+    // 5. Transmisión
+    if (/\b(transmisi[oó]n|caja|caja\s+de\s+cambios|cambio|cambios|embrague|clutch|diferencial|card[aá]n|retardador)\b/i.test(lower)) {
+      return 'Transmisión';
+    }
+    // 6. Neumáticos
+    if (/\b(neum[aá]tico|neum[aá]ticos|llanta|llantas|caucho|cauchos|pinchado|pinchazo|calibraci[oó]n|rin|rines|rodaje)\b/i.test(lower)) {
+      return 'Neumáticos';
+    }
+    // 7. Electricidad
+    if (/\b(electricidad|el[eé]ctrico|bater[ií]a|baterias|alternador|luz|luces|foco|focos|direccional|direccionales|fusible|fusibles|cable|cables|cableado|arranque|tablero|rutero|sensor)\b/i.test(lower)) {
+      return 'Electricidad';
+    }
+    // 8. Taller
+    if (/\b(taller|mantenimiento|preventivo|revisi[oó]n|revision|servicio|aceite|filtro|filtros|motor|radiador|refrigerante)\b/i.test(lower)) {
+      return 'Taller';
+    }
+    return 'Otros';
+  }
+
   // ===== PARSE VOICE =====
   function parseVoiceEntry(text) {
     const parsed = document.getElementById('quickParsed');
@@ -819,33 +938,18 @@
     // Scroll to parsed form
     setTimeout(() => parsed.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
-    // Bus number
-    const busMatch = text.match(/\b(?:bus|unidad|camión|carro|micro)\s*(?:número\s*)?(\d+)\b/i)
-      || text.match(/\b(\d{1,4})\b/);
-    document.getElementById('qBus').value = busMatch
-      ? (text.match(/\b(?:bus|unidad|camión|carro|micro)/i)?.[0] || 'Bus') + ' ' + busMatch[1]
-      : '';
+    // Bus / Unidad code
+    const busCode = extractBusCode(text);
+    document.getElementById('qBus').value = busCode;
+
+    // Specialty
+    document.getElementById('qTipo').value = parseEspecialidad(text);
 
     // Priority
     if (/\b(urgent|urgente|ya|inmediato|crítico|critico|importante)\b/i.test(text)) {
       document.getElementById('qPrioridad').value = 'alta';
     } else {
       document.getElementById('qPrioridad').value = 'media';
-    }
-
-    // Type
-    if (/\b(aceite|motor|freno|transmisión|clutch|embrague|radiador|mecánic)/i.test(text)) {
-      document.getElementById('qTipo').value = 'Mecánico';
-    } else if (/\b(llanta|neumático|rin|balanceo|alineación)/i.test(text)) {
-      document.getElementById('qTipo').value = 'Llantas';
-    } else if (/\b(eléctric|batería|alternador|luz|foco|cables)/i.test(text)) {
-      document.getElementById('qTipo').value = 'Eléctrico';
-    } else if (/\b(carrocería|pintura|golpe|abolladura|vidrio|espejo)/i.test(text)) {
-      document.getElementById('qTipo').value = 'Carrocería';
-    } else if (/\b(programación|ruta|horario|turno|asignación)/i.test(text)) {
-      document.getElementById('qTipo').value = 'Programación';
-    } else {
-      document.getElementById('qTipo').value = 'Otro';
     }
 
     // Date
@@ -891,10 +995,13 @@
   }
 
   function saveQuick() {
+    const busVal = document.getElementById('qBus').value.trim() || 'Sin identificar';
+    const espVal = document.getElementById('qTipo').value;
     const entry = {
       id: Date.now(),
-      bus: document.getElementById('qBus').value || 'Sin identificar',
-      tipo: document.getElementById('qTipo').value,
+      bus: busVal,
+      especialidad: espVal,
+      tipo: espVal,
       prioridad: document.getElementById('qPrioridad').value,
       fecha: document.getElementById('qFecha').value,
       descripcion: document.getElementById('qDesc').value,
@@ -918,17 +1025,21 @@
 
   // ===== FORM =====
   function saveForm() {
-    const bus = document.getElementById('fBus').value.trim();
+    let bus = document.getElementById('fBus').value.trim();
     if (!bus) {
       alert('Ingresa el bus o unidad');
       document.getElementById('fBus').focus();
       return;
     }
+    const parsedBus = extractBusCode(bus);
+    if (parsedBus) bus = parsedBus;
 
+    const espVal = document.getElementById('fTipo').value;
     const entry = {
       id: Date.now(),
       bus: bus,
-      tipo: document.getElementById('fTipo').value,
+      especialidad: espVal,
+      tipo: espVal,
       prioridad: document.getElementById('fPrioridad').value,
       fecha: document.getElementById('fFecha').value || formatDateISO(new Date()),
       descripcion: document.getElementById('fDesc').value,
@@ -948,7 +1059,7 @@
 
   function clearForm() {
     ['fBus', 'fDesc', 'fReporto'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('fTipo').value = 'Mecánico';
+    document.getElementById('fTipo').value = 'Carrocería Interna';
     document.getElementById('fPrioridad').value = 'media';
     document.getElementById('fFecha').value = '';
   }
@@ -957,11 +1068,14 @@
   function renderLog() {
     const entries = loadEntries();
     const search = document.getElementById('filterSearch').value.toLowerCase();
+    const especialidadFilter = document.getElementById('filterEspecialidad')?.value || '';
     const statusFilter = document.getElementById('filterStatus').value;
     const priorityFilter = document.getElementById('filterPriority').value;
 
     const filtered = entries.filter(e => {
-      if (search && !e.bus.toLowerCase().includes(search) && !(e.descripcion||'').toLowerCase().includes(search)) return false;
+      const esp = e.especialidad || e.tipo || '';
+      if (search && !e.bus.toLowerCase().includes(search) && !(e.descripcion||'').toLowerCase().includes(search) && !esp.toLowerCase().includes(search)) return false;
+      if (especialidadFilter && esp !== especialidadFilter) return false;
       if (statusFilter && e.estado !== statusFilter) return false;
       if (priorityFilter && e.prioridad !== priorityFilter) return false;
       return true;
@@ -973,7 +1087,7 @@
       container.innerHTML = `
         <div class="empty-state">
           <div class="icon">📋</div>
-          <p>No hay registros${search || statusFilter || priorityFilter ? ' con ese filtro' : ' aún'}.</p>
+          <p>No hay registros${search || especialidadFilter || statusFilter || priorityFilter ? ' con ese filtro' : ' aún'}.</p>
           <p style="font-size:0.78rem;margin-top:0.5rem;color:#999">Usa 🎤 Voz Rápida para agregar uno</p>
         </div>`;
       return;
@@ -986,7 +1100,7 @@
           <div class="log-badges">
             <span class="badge badge-${e.prioridad}">${e.prioridad}</span>
             <span class="badge badge-${(e.estado||'').replace(' ', '-')}">${e.estado}</span>
-            <span class="badge" style="background:#ede7f6;color:#4527a0">${esc(e.tipo)}</span>
+            <span class="badge" style="background:#ede7f6;color:#4527a0">${esc(e.especialidad || e.tipo || 'Taller')}</span>
           </div>
         </div>
         <div class="log-type">📅 ${e.fecha ? formatDateDisplay(e.fecha) : 'Sin fecha'}${e.reporto ? ' · 👤 ' + esc(e.reporto) : ''}</div>
@@ -1049,8 +1163,8 @@
   function exportCSV() {
     const entries = loadEntries();
     if (!entries.length) { alert('No hay registros'); return; }
-    const headers = ['Bus','Tipo','Prioridad','Estado','Fecha','Descripción','Reportó','Creado'];
-    const rows = entries.map(e => [e.bus,e.tipo,e.prioridad,e.estado,e.fecha,e.descripcion,e.reporto,e.creado]);
+    const headers = ['Bus','Especialidad','Prioridad','Estado','Fecha','Descripción','Reportó','Creado'];
+    const rows = entries.map(e => [e.bus, e.especialidad || e.tipo || '', e.prioridad, e.estado, e.fecha, e.descripcion, e.reporto, e.creado]);
     const csv = [headers,...rows].map(r => r.map(c => '"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
     download(csv, 'bitacora_buses.csv', 'text/csv');
   }
@@ -1112,8 +1226,18 @@
   onTap(document.getElementById('btnClearForm'), clearForm);
   onTap(document.getElementById('btnSaveForm'), saveForm);
 
+  // Auto-format manual bus input (e.g. typing "troncal 45" converts to 41045)
+  document.getElementById('fBus').addEventListener('blur', function() {
+    const val = this.value.trim();
+    if (val) {
+      const code = extractBusCode(val);
+      if (code) this.value = code;
+    }
+  });
+
   // Filters
   document.getElementById('filterSearch').addEventListener('input', renderLog);
+  document.getElementById('filterEspecialidad')?.addEventListener('change', renderLog);
   document.getElementById('filterStatus').addEventListener('change', renderLog);
   document.getElementById('filterPriority').addEventListener('change', renderLog);
 
