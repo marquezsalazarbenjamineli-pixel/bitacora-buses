@@ -1,7 +1,9 @@
-const CACHE_NAME = 'bitacora-buses-v1';
+const CACHE_NAME = 'bitacora-buses-v2';
 const ASSETS = [
+  'index.html',
   'bitacora.html',
-  'manifest.json'
+  'manifest.json',
+  'fondo-buses.jpg'
 ];
 
 self.addEventListener('install', e => {
